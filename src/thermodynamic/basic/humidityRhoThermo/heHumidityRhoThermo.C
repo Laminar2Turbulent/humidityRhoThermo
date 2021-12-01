@@ -372,7 +372,6 @@ partialPressureH2O()
     );
 
     const volScalarField& p = this->p_;
-    const volScalarField& T = this->T_;
     const volScalarField& sH = this->specificHumidityPtr_();
 
     volScalarField& pPH2O = this->partialPressureH2O_;
@@ -443,7 +442,6 @@ void Foam::heHumidityRhoThermo<BasicPsiThermo, MixtureType>::waterVapor()
 {
     const volScalarField& pPH2O = this->partialPressureH2O_;
     const volScalarField& pSatH2O = this->pSatH2O_;
-    const volScalarField& p = this->p_;
     const volScalarField& T = this->T_;
 
     const dimensionedScalar RSpecificH2O
@@ -493,7 +491,6 @@ void Foam::heHumidityRhoThermo<BasicPsiThermo, MixtureType>::waterMass()
     const volScalarField& waterVapor = this->waterVapor_;
     const scalarField& V = waterVapor.mesh().V();
 
-    const scalarField& waterVaporPF = waterVapor.internalField();
     scalarField& waterMass = this->waterMass_;
 
     waterMass = waterVapor*V;
@@ -608,7 +605,6 @@ initialSpecificHumidityFromRelHumidity()
     );
 
     const volScalarField& pPH2O = this->partialPressureH2O_;
-    const volScalarField& T = this->T_;
     const volScalarField& p = this->p_;
     volScalarField& specHum = this->specificHumidityPtr_();
 
@@ -673,7 +669,6 @@ void Foam::heHumidityRhoThermo<BasicPsiThermo, MixtureType>::updateRho
     volScalarField& rho
 )
 {
-    const volScalarField& specHum = this->specificHumidityPtr_();
     const volScalarField& T = this->T_;
     const volScalarField& pPH2O = this->partialPressureH2O_;
     const volScalarField& p = this->p_;
