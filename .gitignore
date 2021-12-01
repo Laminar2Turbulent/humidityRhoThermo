@@ -4,3 +4,9 @@
 *.toc
 *.foam
 *.swp
+
+applications/solvers/heatTransfer/buoyantHumidityPimpleFoam/Make/linux64GccDPInt32Opt/
+
+src/thermodynamic/basic/lnInclude/
+
+src/thermodynamic/basic/Make/linux64GccDPInt32Opt/
