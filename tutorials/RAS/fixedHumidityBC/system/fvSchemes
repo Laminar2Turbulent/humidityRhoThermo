@@ -28,13 +28,13 @@ gradSchemes
 divSchemes
 {
     default         none;
-    div(phi,U)      Gauss linearUpwindV grad(U);
-    div(phi,h)      Gauss linear;
-    div(phi,e)      Gauss linear;
+    div(phi,U)      Gauss linearUpwind grad(U);
+    div(phi,h)      Gauss linearUpwind grad(h);
+    div(phi,e)      Gauss linearUpwind grad(e);
     div(phi,epsilon)      Gauss upwind;
     div(phi,k)      Gauss upwind;
     div(phi,K)      Gauss linear;
-    div(phi,thermo:specificHumidity)   Gauss linear;
+    div(phi,specificHumidity)   Gauss linearUpwind grad(specificHumidity);
     div(((rho*nuEff)*dev2(T(grad(U))))) Gauss linear;
 }
 

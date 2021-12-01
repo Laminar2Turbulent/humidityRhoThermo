@@ -9,58 +9,59 @@ FoamFile
 {
     version     2.0;
     format      ascii;
-    class       dictionary;
-    location    "system";
-    object      fvSolution;
+    class       volScalarField;
+    object      relHumidity;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-solvers
+dimensions      [0 0 0 0 0 0 0];
+
+internalField   uniform 0.3;
+
+boundaryField
 {
-    "rho.*"
+    walls
     {
-        solver          PCG;
-        preconditioner  DIC;
-        tolerance       0;
-        relTol          0;
+        type            zeroGradient;
     }
 
-    p_rgh
+    inletTop
     {
-        solver          PCG;
-        preconditioner  DIC;
-        tolerance       1e-8;
-        relTol          0.01;
+        type            fixedHumidity;
+        mode            relative;
+        method          magnus;
+        humidity        0.50;
+        value           uniform 0.0;
     }
 
-    p_rghFinal
+    inletBottom
     {
-        $p_rgh;
-        relTol          0;
+        type            fixedHumidity;
+        mode            relative;
+        method          magnus;
+        humidity        0.30;
+        value           uniform 0.0;
     }
 
-    "(U|h|e|k|epsilon|R)"
+    outletTop
     {
-        solver          PBiCGStab;
-        preconditioner  DILU;
-        tolerance       1e-6;
-        relTol          0.1;
+        type            zeroGradient;
     }
 
-    "(U|h|e|k|epsilon|R|specificHumidity)Final"
+    outletBottom
     {
-        $U;
-        relTol          0;
+        type            zeroGradient;
+    }
+
+    front
+    {
+        type            empty;
+    }
+
+    back
+    {
+        type            empty;
     }
 }
-
-PIMPLE
-{
-    momentumPredictor yes;
-    nOuterCorrectors 1;
-    nCorrectors     2;
-    nNonOrthogonalCorrectors 0;
-}
-
 
 // ************************************************************************* //
