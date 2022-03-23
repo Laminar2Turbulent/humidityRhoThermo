@@ -28,6 +28,7 @@ License
 #include "fvMatricesFwd.H"
 #include "fvCFD.H"
 #include "bound.H"
+#include "geometricOneField.H"
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
@@ -61,13 +62,14 @@ void Foam::heHumidityRhoThermo<BasicPsiThermo, MixtureType>::calculate
         );
 
         updateRho(this->rho_.oldTime());
+        updatePsi(this->psi_.oldTime());
     }
 
     const scalarField& hCells = he.primitiveField();
     const scalarField& pCells = p.primitiveField();
 
     scalarField& TCells = T.primitiveFieldRef();
-    scalarField& psiCells = psi.primitiveFieldRef();
+//    scalarField& psiCells = psi.primitiveFieldRef();
     scalarField& muCells = mu.primitiveFieldRef();
     scalarField& alphaCells = alpha.primitiveFieldRef();
 
@@ -86,14 +88,14 @@ void Foam::heHumidityRhoThermo<BasicPsiThermo, MixtureType>::calculate
             );
         }
 
-        psiCells[celli] = mixture_.psi(pCells[celli], TCells[celli]);
+//        psiCells[celli] = mixture_.psi(pCells[celli], TCells[celli]);
         muCells[celli] = mixture_.mu(pCells[celli], TCells[celli]);
         alphaCells[celli] = mixture_.alphah(pCells[celli], TCells[celli]);
     }
 
     const volScalarField::Boundary& pBf = p.boundaryField();
     volScalarField::Boundary& TBf = T.boundaryFieldRef();
-    volScalarField::Boundary& psiBf = psi.boundaryFieldRef();
+//    volScalarField::Boundary& psiBf = psi.boundaryFieldRef();
     volScalarField::Boundary& heBf = he.boundaryFieldRef();
     volScalarField::Boundary& muBf = mu.boundaryFieldRef();
     volScalarField::Boundary& alphaBf = alpha.boundaryFieldRef();
@@ -102,7 +104,7 @@ void Foam::heHumidityRhoThermo<BasicPsiThermo, MixtureType>::calculate
     {
         const fvPatchScalarField& pp = pBf[patchi];
         fvPatchScalarField& pT = TBf[patchi];
-        fvPatchScalarField& ppsi = psiBf[patchi];
+//        fvPatchScalarField& ppsi = psiBf[patchi];
         fvPatchScalarField& phe = heBf[patchi];
         fvPatchScalarField& pmu = muBf[patchi];
         fvPatchScalarField& palpha = alphaBf[patchi];
@@ -115,7 +117,7 @@ void Foam::heHumidityRhoThermo<BasicPsiThermo, MixtureType>::calculate
                     this->patchFaceMixture(patchi, facei);
 
                 phe[facei] = mixture_.HE(pp[facei], pT[facei]);
-                ppsi[facei] = mixture_.psi(pp[facei], pT[facei]);
+//                ppsi[facei] = mixture_.psi(pp[facei], pT[facei]);
                 pmu[facei] = mixture_.mu(pp[facei], pT[facei]);
                 palpha[facei] = mixture_.alphah(pp[facei], pT[facei]);
             }
@@ -132,13 +134,33 @@ void Foam::heHumidityRhoThermo<BasicPsiThermo, MixtureType>::calculate
                     pT[facei] = mixture_.THE(phe[facei], pp[facei], pT[facei]);
                 }
 
-                ppsi[facei] = mixture_.psi(pp[facei], pT[facei]);
+//                ppsi[facei] = mixture_.psi(pp[facei], pT[facei]);
                 pmu[facei] = mixture_.mu(pp[facei], pT[facei]);
                 palpha[facei] = mixture_.alphah(pp[facei], pT[facei]);
             }
         }
     }
+
+    updateRho(this->rho_);
+    updatePsi(this->psi_);
 }
+
+
+template<class BasicPsiThermo, class MixtureType>
+inline Foam::scalar Foam::heHumidityRhoThermo<BasicPsiThermo, MixtureType>::psi
+(
+    scalar p,
+    scalar T,
+    scalar sH,
+    scalar RdryAir,
+    scalar RwaterVapor
+) const
+{
+        scalar factor = pow(1 - RdryAir/RwaterVapor * (1 - pow(sH + VSMALL, -1)), -1);
+
+    return (1.0/T)*((1.0- factor)/RdryAir + factor/RwaterVapor);
+}
+
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
@@ -149,8 +171,16 @@ Foam::heHumidityRhoThermo<BasicPsiThermo, MixtureType>::heHumidityRhoThermo
     const word& phaseName
 )
 :
-    heThermo<BasicPsiThermo, MixtureType>(mesh, phaseName)
+    heThermo<BasicPsiThermo, MixtureType>(mesh, phaseName),
+    pRef_("pref", dimensionSet(1,-1,-2,0,0,0,0), -1)
 {
+
+    if (this->incompressible())
+    {
+        const dictionary& dict = this->subDict("mixture");
+        pRef_.value() = dict.subDict("equationOfState").get<scalar>("pRef");
+    }
+
     if (this->initWithRelHumidity_)
     {
         initialize();
@@ -170,6 +200,10 @@ Foam::heHumidityRhoThermo<BasicPsiThermo, MixtureType>::heHumidityRhoThermo
 
     // First initialisation of the density
     updateRho(this->rho_);
+
+    // First initialisation of the psi
+    updatePsi(this->psi_);
+
 }
 
 
@@ -181,8 +215,15 @@ Foam::heHumidityRhoThermo<BasicPsiThermo, MixtureType>::heHumidityRhoThermo
     const word& dictName
 )
 :
-    heThermo<BasicPsiThermo, MixtureType>(mesh, phaseName, dictName)
+    heThermo<BasicPsiThermo, MixtureType>(mesh, phaseName, dictName),
+    pRef_("pref", dimensionSet(1,-1,-2,0,0,0,0), -1)
 {
+    if (this->incompressible())
+    {
+        const dictionary& dict = this->subDict("mixture");
+        pRef_.value() = dict.subDict("equationOfState").get<scalar>("pRef");
+    }
+
     if (this->initWithRelHumidity_)
     {
         initialize();
@@ -202,6 +243,10 @@ Foam::heHumidityRhoThermo<BasicPsiThermo, MixtureType>::heHumidityRhoThermo
 
     // First initialisation of the density
     updateRho(this->rho_);
+
+    // First initialisation of the psi
+    updatePsi(this->psi_);
+
 }
 
 
@@ -265,6 +310,9 @@ void Foam::heHumidityRhoThermo<BasicPsiThermo, MixtureType>::correct()
 
     //Info<< "   Calculate the density field\n";
     updateRho(this->rho_);
+
+    //Info<< "   Calculate the psi field\n";
+    updatePsi(this->psi_);
 
     //- Keep the physical bound of the maximum values
     limitMax();
@@ -371,14 +419,25 @@ partialPressureH2O()
         scalar(287.058)
     );
 
-    const volScalarField& p = this->p_;
+    //const volScalarField& p = this->p_;
+    const volScalarField& p = this->p();
+
     const volScalarField& sH = this->specificHumidityPtr_();
 
     volScalarField& pPH2O = this->partialPressureH2O_;
 
-    // Equation 20
-    pPH2O =
-        p*pow(1 - RSpecificDryAir/RSpecificH2O * (1-pow(sH+VSMALL, -1)), -1);
+    if (this->incompressible())
+    {
+        // Equation 20
+        pPH2O =
+            pRef_*pow(1 - RSpecificDryAir/RSpecificH2O * (1-pow(sH+VSMALL, -1)), -1);
+    }
+    else
+    {
+        // Equation 20
+        pPH2O =
+            p*pow(1 - RSpecificDryAir/RSpecificH2O * (1-pow(sH+VSMALL, -1)), -1);
+    }
 }
 
 
@@ -479,9 +538,18 @@ maxSpecificHumidity()
         scalar(287.058)
     );
 
-    // Calculate the maximum possible specific humidity value equation (23)
-    maxSpecificHumidity =
-        maxWaterVapor / ((p-pSatH2O)/(RSpecificDryAir*T) + maxWaterVapor);
+    if (this->incompressible())
+    {
+        // Calculate the maximum possible specific humidity value equation (23)
+        maxSpecificHumidity =
+            maxWaterVapor / ((pRef_-pSatH2O)/(RSpecificDryAir*T) + maxWaterVapor);
+    }
+    else
+    {
+        // Calculate the maximum possible specific humidity value equation (23)
+        maxSpecificHumidity =
+            maxWaterVapor / ((p-pSatH2O)/(RSpecificDryAir*T) + maxWaterVapor);
+    }
 }
 
 
@@ -627,35 +695,69 @@ initialSpecificHumidityFromRelHumidity()
     // Initialize the specific humidity field
     scalarField& specHumCells = specHum.primitiveFieldRef();
 
-    forAll(specHumCells, celli)
-    {
-        specHumCells[celli] =
-            pow
-            (
-                1
-              - (1- p[celli]/(pPH2O[celli]+VSMALL))
-              * RwaterVapor.value()/RdryAir.value(),
-               -1
-            );
-    }
-
     // Update the boundary
     volScalarField::Boundary& specHumBf = specHum.boundaryFieldRef();
 
-    forAll(specHumBf, patchi)
+    if (this->incompressible())
     {
-        fvPatchScalarField& pspecHum = specHumBf[patchi];
-
-        forAll(pspecHum, facei)
+        forAll(specHumCells, celli)
         {
-            pspecHum[facei] =
+            specHumCells[celli] =
                 pow
                 (
                     1
-                  - (1- p[facei]/(pPH2O[facei]+VSMALL))
+                  - (1- pRef_.value()/(pPH2O[celli]+VSMALL))
                   * RwaterVapor.value()/RdryAir.value(),
                    -1
                 );
+        }
+
+        forAll(specHumBf, patchi)
+        {
+            fvPatchScalarField& pspecHum = specHumBf[patchi];
+
+            forAll(pspecHum, facei)
+            {
+                pspecHum[facei] =
+                    pow
+                    (
+                        1
+                      - (1- pRef_.value()/(pPH2O[facei]+VSMALL))
+                      * RwaterVapor.value()/RdryAir.value(),
+                       -1
+                    );
+            }
+        }
+    }
+    else
+    {
+        forAll(specHumCells, celli)
+        {
+            specHumCells[celli] =
+                pow
+                (
+                    1
+                  - (1- p[celli]/(pPH2O[celli]+VSMALL))
+                  * RwaterVapor.value()/RdryAir.value(),
+                   -1
+                );
+        }
+
+        forAll(specHumBf, patchi)
+        {
+            fvPatchScalarField& pspecHum = specHumBf[patchi];
+
+            forAll(pspecHum, facei)
+            {
+                pspecHum[facei] =
+                    pow
+                    (
+                        1
+                      - (1- p[facei]/(pPH2O[facei]+VSMALL))
+                      * RwaterVapor.value()/RdryAir.value(),
+                       -1
+                    );
+            }
         }
     }
 
@@ -691,30 +793,147 @@ void Foam::heHumidityRhoThermo<BasicPsiThermo, MixtureType>::updateRho
 
     scalarField& rhoCells = rho.primitiveFieldRef();
 
-    forAll(rhoCells, celli)
-    {
-        rhoCells[celli] =
-            1/T[celli]
-          * (
-                (p[celli] - pPH2O[celli])
-              / RdryAir.value() + pPH2O[celli]/RwaterVapor.value()
-            );
-    }
-
     volScalarField::Boundary& rhoBf = rho.boundaryFieldRef();
 
-    forAll(rhoBf, patchi)
+    if (this->incompressible())
     {
-        fvPatchScalarField& prho = rhoBf[patchi];
-
-        forAll(prho, facei)
+        Info<<"update density for incompressible"<<endl;
+        forAll(rhoCells, celli)
         {
-            prho[facei] =
-                1/T[facei]
+            rhoCells[celli] =
+                1/T[celli]
               * (
-                    (p[facei] - pPH2O[facei])
-                  / RdryAir.value() + pPH2O[facei]/RwaterVapor.value()
+                    (pRef_.value() - pPH2O[celli])
+                  / RdryAir.value() + pPH2O[celli]/RwaterVapor.value()
                 );
+        }
+
+        forAll(rhoBf, patchi)
+        {
+            fvPatchScalarField& prho = rhoBf[patchi];
+
+            forAll(prho, facei)
+            {
+                prho[facei] =
+                    1/T[facei]
+                  * (
+                        (pRef_.value() - pPH2O[facei])
+                      / RdryAir.value() + pPH2O[facei]/RwaterVapor.value()
+                    );
+            }
+        }
+    }
+    else
+    {
+        forAll(rhoCells, celli)
+        {
+            rhoCells[celli] =
+                1/T[celli]
+              * (
+                    (p[celli] - pPH2O[celli])
+                  / RdryAir.value() + pPH2O[celli]/RwaterVapor.value()
+                );
+        }
+
+        forAll(rhoBf, patchi)
+        {
+            fvPatchScalarField& prho = rhoBf[patchi];
+
+            forAll(prho, facei)
+            {
+                prho[facei] =
+                    1/T[facei]
+                  * (
+                        (p[facei] - pPH2O[facei])
+                      / RdryAir.value() + pPH2O[facei]/RwaterVapor.value()
+                    );
+            }
+        }
+
+    }
+}
+
+
+template<class BasicPsiThermo, class MixtureType>
+void Foam::heHumidityRhoThermo<BasicPsiThermo, MixtureType>::updatePsi
+(
+    volScalarField& psi
+)
+{
+    const volScalarField& T = this->T_;
+//    const volScalarField& pPH2O = this->partialPressureH2O_;
+    const volScalarField& p = this->p_;
+    volScalarField& sH = this->specificHumidityPtr_();
+
+    // Specific gas constant dry air [J/kg/K]
+    const dimensionedScalar RdryAir
+    (
+        "RdryAir",
+        dimensionSet(0,2,-2,-1,0,0,0),
+        scalar(287.058)
+    );
+
+    // Specific gas constant water vapor [J/kg/K]
+    const dimensionedScalar RwaterVapor
+    (
+        "RwaterVapor",
+        dimensionSet(0,2,-2,-1,0,0,0),
+        scalar(461.51)
+    );
+
+    scalarField& psiCells = psi.primitiveFieldRef();
+    const scalarField& TCells = T.primitiveField();
+    const scalarField& pCells = p.primitiveField();
+    const scalarField& sHCells = sH.primitiveField();
+
+    volScalarField::Boundary& psiBf = psi.boundaryFieldRef();
+    const volScalarField::Boundary& pBf = p.boundaryField();
+    const volScalarField::Boundary& TBf = T.boundaryField();
+    const volScalarField::Boundary& sHBf = sH.boundaryField();
+
+    if (this->incompressible())
+    {
+        Info<<"Update density for incompressible"<<endl;
+
+        forAll(psiCells, celli)
+        {
+//            const typename MixtureType::thermoType& mixture_ =
+//                this->cellMixture(celli);
+            psiCells[celli] = 0; //mixture_.psi(pCells[celli], TCells[celli]);
+        }
+
+        forAll(psiBf, patchi)
+        {
+            fvPatchScalarField& ppsi = psiBf[patchi];
+//            const fvPatchScalarField& pp = pBf[patchi];/
+//            const fvPatchScalarField& pT = TBf[patchi];
+
+            forAll(psi, facei)
+            {
+//                const typename MixtureType::thermoType& mixture_ =
+//                    this->patchFaceMixture(patchi, facei);
+                ppsi[facei] = 0;//mixture_.psi(pp[facei], pT[facei]);
+            }
+        }
+    }
+    else
+    {
+        forAll(psiCells, celli)
+        {
+            psiCells[celli] = this->psi(pCells[celli], TCells[celli], sHCells[celli], RdryAir.value(), RwaterVapor.value());
+        }
+
+        forAll(psiBf, patchi)
+        {
+            fvPatchScalarField& ppsi = psiBf[patchi];
+            const fvPatchScalarField& pp = pBf[patchi];
+            const fvPatchScalarField& pT = TBf[patchi];
+            const fvPatchScalarField& psH = sHBf[patchi];
+
+            forAll(ppsi, facei)
+            {
+                ppsi[facei] = this->psi(pp[facei], pT[facei], psH[facei], RdryAir.value(), RwaterVapor.value());
+            }
         }
     }
 }
@@ -743,5 +962,7 @@ void Foam::heHumidityRhoThermo<BasicPsiThermo, MixtureType>::limitMax()
         Info<< "    Correcting " << max << " cells which were higher than max\n";
     }
 }
+
+
 
 // ************************************************************************* //

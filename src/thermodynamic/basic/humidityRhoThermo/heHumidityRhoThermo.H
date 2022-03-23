@@ -52,6 +52,9 @@ class heHumidityRhoThermo
 :
     public heThermo<BasicPsiThermo, MixtureType>
 {
+
+     dimensionedScalar pRef_;
+
     // Private Member Functions
 
         //- Calculate the thermo variables
@@ -66,6 +69,9 @@ class heHumidityRhoThermo
             volScalarField& alpha,
             const bool doOldTimes
         );
+
+        //- Return compressibility rho/p [s^2/m^2]
+        scalar psi(scalar p, scalar T, scalar Sh, scalar Ra, scalar Rw) const;
 
         //- Construct as copy (not implemented)
         heHumidityRhoThermo(const heHumidityRhoThermo<BasicPsiThermo, MixtureType>&);
@@ -139,6 +145,9 @@ public:
 
         //- Update density field
         virtual void updateRho(volScalarField&);
+
+        //- Update psi field
+        virtual void updatePsi(volScalarField&);
 
         //- Limit the specific humidity to the max range
         virtual void limitMax();
