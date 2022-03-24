@@ -21,5 +21,5 @@ EXE_LIBS = \
     -lturbulenceModels \
     -lcompressibleTurbulenceModels \
     -latmosphericModels \
-    -L$(FOAM_USER_LIBBIN) \
+    -L$(FOAM_SITE_LIBBIN) \
     -lhumidityRhoThermo

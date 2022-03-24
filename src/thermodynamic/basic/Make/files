@@ -2,4 +2,4 @@ humidityRhoThermo/humidityRhoThermo.C
 humidityRhoThermo/humidityRhoThermos.C
 derivedFvPatchFields/fixedHumidity/fixedHumidityFvPatchScalarField.C
 
-LIB = $(FOAM_USER_LIBBIN)/libhumidityRhoThermo
+LIB = $(FOAM_SITE_LIBBIN)/libhumidityRhoThermo
