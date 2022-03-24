@@ -171,6 +171,7 @@ Foam::heHumidityRhoThermo<BasicPsiThermo, MixtureType>::heHumidityRhoThermo
     heThermo<BasicPsiThermo, MixtureType>(mesh, phaseName),
     pRef_("pref", dimensionSet(1,-1,-2,0,0,0,0), -1)
 {
+    Info<<"Version = 1.1"<<endl;
 
     if (this->incompressible())
     {
@@ -215,6 +216,8 @@ Foam::heHumidityRhoThermo<BasicPsiThermo, MixtureType>::heHumidityRhoThermo
     heThermo<BasicPsiThermo, MixtureType>(mesh, phaseName, dictName),
     pRef_("pref", dimensionSet(1,-1,-2,0,0,0,0), -1)
 {
+    Info<<"Version = 1.1"<<endl;
+
     if (this->incompressible())
     {
         const dictionary& dict = this->subDict("mixture");
