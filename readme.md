@@ -1,3 +1,5 @@
+## DANGER ## The code in this repo has been shown to give results that are non-mass conservative.
+
 # Thermodynamic library: humidityRhoThermo
 This library takes humidity effects into account and is mainly built for HVAC analysis. The validity is limited to around 1 bar and -50 degC to 100 degC. The library is built for different OpenFOAM versions. For more complex analysis (different pressure than atmospheric one or higher temperatures) one should use the reactingFoam for taking into account the humidity.
 
